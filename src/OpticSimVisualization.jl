@@ -8,7 +8,7 @@ module OpticSimVisualization
 using OpticSim
 using OpticSim: euclideancontrolpoints, evalcsg, vertex, makiemesh, detector, centroid, lower, upper, intervals, α
 using OpticSim.Geometry
-import OpticSimRepeatingStructures as OpticSimRepeatingStructures
+
 
 using Unitful
 using ImageView
