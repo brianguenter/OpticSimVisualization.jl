@@ -8,31 +8,6 @@
 # all functions follow the pattern draw(obj) and draw!(ax, obj) where the first case draws the object in a blank Axis and displays it, and
 # the second case draws the object in an existing Axis, draw!(obj) can also be used to draw the object in the current Axis
 
-# Those should be renamed (e.g. `scene()` returns a Figure), or removed?
-global current_main_scene = nothing
-global current_3d_scene = nothing
-global current_mode = nothing           # modes:    nothing, :default  -> Original Vis behavior    
-#           :pluto             -> support pluto notebooks 
-#           :docs              -> support documenter figures 
-
-# added the following 2 functions to allow us to hack the drawing mechanism while in a pluto notebook
-set_current_main_scene(scene) = (global current_main_scene = scene)
-set_current_3d_scene(lscene) = (global current_3d_scene = lscene)
-
-get_current_mode() = begin
-    global current_mode
-    return current_mode
-end
-set_current_mode(mode) = (global current_mode = mode)
-
-show(image) = imshow(image)
-display(scene=current_main_scene) = begin
-    global current_mode
-    if (get_current_mode() == :pluto || get_current_mode() == :docs)
-        return scene
-    end
-    Makie.display(scene)
-end
 
 """
     scene(resolution = (1000, 1000))
@@ -43,12 +18,11 @@ function scene(resolution=(1000, 1000))
     @assert resolution[1] > 0 && resolution[2] > 0
 
     fig = Makie.Figure(size=resolution)
-    global current_main_scene = fig
+
 
     ax = Makie.LScene(fig[1, 1];
         scenekw=(; camera=Makie.cam3d_cad!)
     )
-    global current_3d_scene = ax
 
     # in these modes we want to skip the creation of the utility buttons as these modes are not interactive
     if (get_current_mode() == :pluto || get_current_mode() == :docs)
@@ -81,9 +55,13 @@ function scene(resolution=(1000, 1000))
         yield()
     end
 
-    return fig, ax
+    return fig
 end
 
+"""get the axis from a scene. By default the axis is stored in fig[1,1]"""
+function get_axis(fig::Figure)
+    return fig[1, 1]
+end
 
 """
     update_camera_orientation(ax::Makie.AbstractAxis, ϕ, θ)
@@ -103,7 +81,8 @@ Draw an object in a new Axis.
 `kwargs` depends on the object type.
 """
 function draw(ob; resolution=(1000, 1000), kwargs...)
-    scene, lscene = Vis.scene(resolution)
+    scene = Vis.scene(resolution)
+    fig_axis = get_axis
     draw!(lscene, ob; kwargs...)
     display(scene)
 
