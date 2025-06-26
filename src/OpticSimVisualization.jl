@@ -11,7 +11,6 @@ using OpticSim.Geometry
 
 
 using Unitful
-using ImageView
 using Images
 using ColorTypes
 using ColorSchemes
@@ -20,12 +19,12 @@ using LinearAlgebra
 import Makie
 import GeometryBasics
 import Plots
-import Luxor
 using FileIO
+using DataFrames
 
 include("Visualization.jl")
 include("Emitters.jl")
-include("VisRepeatingStructures.jl")
+
 
 end # module Vis
 export OpticSimVisualization

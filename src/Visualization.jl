@@ -5,56 +5,6 @@
 
 #############################################################################
 
-function drawcurve!(canvassize::Int, curve::Spline{P,S,N,M}, numpoints::Int; linewidth=0.5, curvecolor=RGB(1, 0, 1), controlpointcolor=RGB(0, 0, 0), controlpointsize=5, controlpolygoncolor=RGB(0, 0, 0)) where {P,S,N,M}
-    step = 1.0 / numpoints
-
-    point1 = point(curve, 0.0) .* canvassize
-    # println("point1 $point1")
-    point1 = [point1[1], canvassize - point1[2]] # flip y because of the coordinate system SVG uses
-
-    Luxor.setline(linewidth)
-    Luxor.sethue(curvecolor)
-
-    for u in step:step:1.0
-        point2 = point(curve, u) .* canvassize
-        point2 = [point2[1], canvassize - point2[2]]
-
-        Luxor.line(Luxor.Point(point1...), Luxor.Point(point2...), :fillstroke)
-        point1 = copy(point2)
-    end
-
-    Luxor.sethue(controlpointcolor)
-    # draw control points
-    controlpoints = euclideancontrolpoints(curve)
-    for point in controlpoints
-        pt = point .* canvassize
-        pt = [pt[1], canvassize - pt[2]]
-        Luxor.circle(Luxor.Point(pt...), controlpointsize, :fill)
-    end
-
-    Luxor.sethue(controlpolygoncolor)
-    for i in 1:(size(controlpoints)[1]-1)
-        pt1 = controlpoints[i] .* canvassize
-        pt1 = [pt1[1], canvassize - pt1[2]]
-        pt2 = controlpoints[i+1] .* canvassize
-        pt2 = [pt2[1], canvassize - pt2[2]]
-        Luxor.line(Luxor.Point(pt1...), Luxor.Point(pt2...), :fillstroke)
-    end
-end
-
-function drawcurves(curves::Vararg{Spline{P,S,N,M}}; numpoints::Int=200, canvassize::Int=2000) where {P,S,N,M}
-    canvas = Luxor.Drawing(canvassize, canvassize)
-    Luxor.background("white")
-    drawcurve!(canvassize, curves[1], numpoints, linewidth=5, curvecolor=RGB(0, 1, 1))
-    for curve in curves[2:end]
-        drawcurve!(canvassize, curve, numpoints, linewidth=1, controlpointcolor=RGB(1, 0, 0), controlpointsize=3, controlpolygoncolor=RGB(0, 1, 0))
-    end
-    Luxor.finish()
-    Luxor.preview()
-end
-
-#############################################################################
-
 # all functions follow the pattern draw(obj) and draw!(ax, obj) where the first case draws the object in a blank Axis and displays it, and
 # the second case draws the object in an existing Axis, draw!(obj) can also be used to draw the object in the current Axis
 
