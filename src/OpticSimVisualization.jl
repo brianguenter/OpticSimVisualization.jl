@@ -10,13 +10,14 @@ using OpticSim: euclideancontrolpoints, evalcsg, vertex, makiemesh, detector, ce
 using OpticSim.Geometry
 
 
+
 using Unitful
 using Images
 using ColorTypes
 using ColorSchemes
 using StaticArrays
 using LinearAlgebra
-import Makie
+import GLMakie
 import GeometryBasics
 import Plots
 using FileIO

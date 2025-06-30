@@ -7,121 +7,102 @@
 
 # all functions follow the pattern draw(obj) and draw!(ax, obj) where the first case draws the object in a blank Axis and displays it, and
 # the second case draws the object in an existing Axis, draw!(obj) can also be used to draw the object in the current Axis
+using GLMakie
+using FileIO
+import GeometryBasics
+using OpticSim: Surface, TriangleMesh, CSGTree, CSGGenerator, makemesh, makiemesh
 
-
-"""
-    scene(resolution = (1000, 1000))
-
-Create a new Makie scene with the given resolution including control buttons.
-"""
-function scene(resolution=(1000, 1000))
-    @assert resolution[1] > 0 && resolution[2] > 0
-
-    fig = Makie.Figure(size=resolution)
-
-
-    ax = Makie.LScene(fig[1, 1];
-        scenekw=(; camera=Makie.cam3d_cad!)
-    )
-
-    # in these modes we want to skip the creation of the utility buttons as these modes are not interactive
-    if (get_current_mode() == :pluto || get_current_mode() == :docs)
-        return fig, ax
-    end
-
-    buttons_layout = Makie.GridLayout(fig[2, 1]; tellwidth=false)
-    threedbutton = Makie.Button(buttons_layout[1, 1], label="3D", buttoncolor=RGB(0.8, 0.8, 0.8), height=40, width=80)
-    twodxbutton = Makie.Button(buttons_layout[1, 2], label="2D-x", buttoncolor=RGB(0.8, 0.8, 0.8), height=40, width=80)
-    twodybutton = Makie.Button(buttons_layout[1, 3], label="2D-y", buttoncolor=RGB(0.8, 0.8, 0.8), height=40, width=80)
-    savebutton = Makie.Button(buttons_layout[1, 4], label="Screenshot", buttoncolor=RGB(0.8, 0.8, 0.8), height=40, width=160)
-
-    Makie.on(threedbutton.clicks) do nclicks
-        update_camera_orientation!(ax, π / 4, π / 4)
-        yield()
-    end
-
-    Makie.on(twodybutton.clicks) do nclicks
-        update_camera_orientation!(ax, π / 2, 0.0)
-        yield()
-    end
-
-    Makie.on(twodxbutton.clicks) do nclicks
-        update_camera_orientation!(ax, 0.0, 0.0)
-        yield()
-    end
-
-    Makie.on(savebutton.clicks) do nclicks
-        Vis.save("screenshot.png")
-        yield()
-    end
-
-    return fig
+function brain()
+    # Load the brain mesh from the asset path
+    return load(assetpath("brain.stl"))
 end
+export brain
 
-"""get the axis from a scene. By default the axis is stored in fig[1,1]"""
-function get_axis(fig::Figure)
+
+
+function get_axis(fig::Makie.Figure)
     return fig[1, 1]
 end
+export get_axis
 
-"""
-    update_camera_orientation(ax::Makie.AbstractAxis, ϕ, θ)
+# MIT license
+# Copyright (c) Microsoft Corporation. All rights reserved.
+# See LICENSE in the project root for full license information.
 
-Set the camera position based on two angles 0 ≤ ϕ ≤ 2π and -pi/2 ≤ θ ≤ pi/2.
-"""
-function update_camera_orientation!(ax::Makie.AbstractAxis, ϕ, θ)
-    cam3d = Makie.cameracontrols(ax)
-    Makie.update_cam!(ax.scene, cam3d, ϕ, θ)
+
+#############################################################################
+
+# all functions follow the pattern draw(obj) and draw!(ax, obj) where the first case draws the object in a blank Axis and displays it, and
+# the second case draws the object in an existing Axis, draw!(obj) can also be used to draw the object in the current Axis
+struct MeshFigure
+    fig::Makie.Figure
 end
 
+function MeshFigure(; resolution=(1000, 1000))
+    fig = Makie.Figure(size=resolution)
+    fig[1, 1] = Axis3(fig)
+    return MeshFigure(fig)
+end
+export MeshFigure
+
+
+figure(mf::MeshFigure) = mf.fig
+axis(mf::MeshFigure) = contents(mf.fig[1, 1])[1]
+clear!(mf::MeshFigure) = empty!(axis(mf))
+export axis, figure
 
 """
-    draw(ob; resolution = (1000, 1000), kwargs...)
+    default_shading(shaded::Bool = true)
 
-Draw an object in a new Axis.
-`kwargs` depends on the object type.
+Return a value that can be passed as a Makie `:shading` keyword argument,
+that is `Makie.automatic` if `shaded` is `true` and `NoShading` otherwise.
 """
-function draw(ob; resolution=(1000, 1000), kwargs...)
-    scene = Vis.scene(resolution)
-    fig_axis = get_axis
-    draw!(lscene, ob; kwargs...)
-    display(scene)
+default_shading(shaded::Bool=true) = shaded ? Makie.automatic : Makie.NoShading
 
-    if (get_current_mode() == :pluto || get_current_mode() == :docs)
-        return scene
+## displaying imported meshes
+
+#These functions are preventing OpticSim from building and Vis doesn't work anyway so temporarily commenting them out until can work out how the new metadata stuff works in GeometryBasics.
+
+# Base.:*(a::OpticSim.Transform, p::GeometryBasics.Meta{GeometryBasics.Point{N,S}}) where {S<:Real,N} = a * p.main
+# Base.:*(a::Real, p::GeometryBasics.Meta{GeometryBasics.Point{N,S}}) where {S<:Real,N} = GeometryBasics.Point{N,S}((a * SVector{N,S}(p))...)
+# Base.:*(a::OpticSim.Transform, p::GeometryBasics.Point{N,S}) where {S<:Real,N} = GeometryBasics.Point{N,S}((a.rotation * SVector{N,S}(p) + a.translation)...)
+
+"""Clears the figure and draws the mesh object"""
+function draw(meshfig::MeshFigure, mesh_object::GeometryBasics.Mesh; kwargs...)
+    clear!(meshfig)
+    draw!(meshfig, mesh_object; kwargs...)
+end
+export draw
+
+function draw!(meshfig::MeshFigure, mesh_object::GeometryBasics.Mesh;
+    color=:gray,
+    debug::Bool=false,  # make sure debug does not end up in kwargs (Makie would error)
+    linewidth=3,
+    shaded::Bool=true,
+    wireframe::Bool=false,
+    transform::OpticSim.Transform{Float64}=OpticSim.identitytransform(Float64),
+    scale::Float64=1.0,
+    kwargs...
+)
+
+    if transform != OpticSim.identitytransform(Float64) || scale != 1.0
+        coords = [transform * (scale * p) for p in GeometryBasics.coordinates(meshdata)]
+        mesh_object = GeometryBasics.Mesh(coords, GeometryBasics.faces(meshdata))
     end
-end
+    shading = default_shading(shaded)
 
-"""
-    draw!([scene = currentscene], ob; kwargs...)
 
-Draw an object in an existing scene.
-`kwargs` depends on the object type.
-"""
-function draw!(ob; kwargs...)
-    if current_3d_scene === nothing
-        scene, lscene = Vis.scene()
+    if wireframe
+        Makie.wireframe!(axis(meshfig), mesh_object, color=(:black, 0.1), linewidth=linewidth)
     else
-        scene = current_main_scene
-        lscene = current_3d_scene
+        Makie.mesh!(axis(meshfig), GeometryBasics.normal_mesh(mesh_object); kwargs..., color=color, shading, visible=shaded)
     end
 
-    draw!(lscene, ob; kwargs...)
-    display(scene)
-
-    if (get_current_mode() == :pluto || get_current_mode() == :docs)
-        return scene
-    end
+    return figure(meshfig)
 end
+export draw!
 
-"""
-    save(path::String)
 
-Save the current Makie scene to an image file.
-"""
-function save(path::String)
-    Makie.save(path, current_main_scene; update=false)
-end
-function save(::Nothing) end
 
 #############################################################################
 
@@ -164,45 +145,6 @@ end
 indexedcolor(i::Int) = ColorSchemes.hsv[rem(i / (2.1 * π), 1.0)]
 indexedcolor2(i::Int) = ColorSchemes.hsv[1.0-rem(i / (2.1 * π), 1.0)] .* 0.5
 
-#############################################################################
-
-## displaying imported meshes
-
-#These functions are preventing OpticSim from building and Vis doesn't work anyway so temporarily commenting them out until can work out how the new metadata stuff works in GeometryBasics.
-
-# Base.:*(a::Transform, p::GeometryBasics.Meta{GeometryBasics.Point{N,S}}) where {S<:Real,N} = a * p.main
-# Base.:*(a::Real, p::GeometryBasics.Meta{GeometryBasics.Point{N,S}}) where {S<:Real,N} = GeometryBasics.Point{N,S}((a * SVector{N,S}(p))...)
-# Base.:*(a::Transform, p::GeometryBasics.Point{N,S}) where {S<:Real,N} = GeometryBasics.Point{N,S}((a.rotation * SVector{N,S}(p) + a.translation)...)
-
-function draw!(ax::Makie.AbstractAxis, ob::AbstractString;
-    color=:gray,
-    debug::Bool=false,  # make sure debug does not end up in kwargs (Makie would error)
-    linewidth=3,
-    shaded::Bool=true,
-    wireframe::Bool=false,
-    transform::Transform{Float64}=identitytransform(Float64),
-    scale::Float64=1.0,
-    kwargs...
-)
-    if any(endswith(lowercase(ob), x) for x in [".obj", "ply", ".2dm", ".off", ".stl"])
-        meshdata = FileIO.load(ob)
-        if transform != identitytransform(Float64) || scale != 1.0
-            coords = [transform * (scale * p) for p in GeometryBasics.coordinates(meshdata)]
-            meshdata = GeometryBasics.Mesh(coords, GeometryBasics.faces(meshdata))
-        end
-        shading = default_shading(shaded)
-        Makie.mesh!(GeometryBasics.normal_mesh(meshdata); kwargs..., color=color, shading, visible=shaded)
-        if wireframe
-            if shaded
-                Makie.wireframe!(scene[end][1], color=(:black, 0.1), linewidth=linewidth)
-            else
-                Makie.wireframe!(scene[end][1], color=color, linewidth=linewidth)
-            end
-        end
-    else
-        @error "Unsupported file type"
-    end
-end
 
 ## GEOMETRY
 
@@ -214,12 +156,14 @@ Transforms `surf` into a mesh using [`makemesh`](@ref) and draws the result.
 `numdivisions` determines the resolution with which the mesh is triangulated.
 `kwargs` is passed on to the [`TriangleMesh`](@ref) drawing function.
 """
-function draw!(ax::Makie.AbstractAxis, surf::Surface{T};
+function draw!(mf::MeshFigure, surf::Surface{T};
     numdivisions::Int=30,
     normals::Bool=false,
     normalcolor=:blue,
     kwargs...
 ) where {T<:Real}
+
+    ax = axis(mf)
     mesh = makemesh(surf, numdivisions)
     if nothing === mesh
         return
@@ -271,34 +215,6 @@ function draw!(ax::Makie.AbstractAxis, tmesh::TriangleMesh{T};
     end
 end
 
-"""
-    draw!(ax::Makie.AbstractAxis, meshes::Vararg{S}; colors::Bool = false, kwargs...) where {T<:Real,S<:Union{TriangleMesh{T},Surface{T}}}
-
-Draw a series of [`TriangleMesh`](@ref) or [`Surface`](@ref) objects, if `colors` is true then each mesh will be colored automatically with a diverse series of colors.
-`kwargs` are is passed on to the drawing function for each element.
-"""
-function draw!(ax::Makie.AbstractAxis, meshes::Vararg{S};
-    colors::Bool=false,
-    kwargs...
-) where {T<:Real,S<:Union{TriangleMesh{T},Surface{T}}}
-    for i in 1:length(meshes)
-        if colors
-            col = indexedcolor2(i)
-        else
-            col = :orange
-        end
-        draw!(ax, meshes[i]; kwargs..., color=col)
-    end
-end
-
-function draw(meshes::Vararg{S}; kwargs...) where {T<:Real,S<:Union{TriangleMesh{T},Surface{T}}}
-    scene, lscene = Vis.scene()
-    draw!(lscene, meshes...; kwargs...)
-    Makie.display(scene)
-    if (get_current_mode() == :pluto || get_current_mode() == :docs)
-        return scene
-    end
-end
 
 """
     draw!(ax::Makie.AbstractAxis, csg::Union{CSGTree,CSGGenerator}; numdivisions::Int = 20, kwargs...)
@@ -313,7 +229,8 @@ draw!(ax::Makie.AbstractAxis, csg::CSGGenerator{T}; kwargs...) where {T<:Real} =
 
 Draw a [`BoundingBox`](@ref) as a wireframe, ie series of lines.
 """
-function draw!(ax::Makie.AbstractAxis, bbox::BoundingBox{T}; kwargs...) where {T<:Real}
+function draw!(meshfig::MeshFigure, bbox::BoundingBox{T}; kwargs...) where {T<:Real}
+    ax = axis(meshfig)
     p1 = SVector{3,T}(bbox.xmin, bbox.ymin, bbox.zmin)
     p2 = SVector{3,T}(bbox.xmin, bbox.ymax, bbox.zmin)
     p3 = SVector{3,T}(bbox.xmin, bbox.ymax, bbox.zmax)
@@ -349,15 +266,6 @@ function draw!(ax::Makie.AbstractAxis, sys::CSGOpticalSystem{T}; kwargs...) wher
 end
 
 draw!(ax::Makie.AbstractAxis, sys::AxisymmetricOpticalSystem{T}; kwargs...) where {T<:Real} = draw!(ax, sys.system; kwargs...)
-
-
-"""
-    default_shading(shaded::Bool = true)
-
-Return a value that can be passed as a Makie `:shading` keyword argument,
-that is `Makie.automatic` if `shaded` is `true` and `NoShading` otherwise.
-"""
-default_shading(shaded::Bool=true) = shaded ? Makie.automatic : Makie.NoShading
 
 
 onlydetectorrays(system::Q, tracevalue::LensTrace{T,3}) where {T<:Real,Q<:AbstractOpticalSystem{T}} = onsurface(detector(system), point(tracevalue))
