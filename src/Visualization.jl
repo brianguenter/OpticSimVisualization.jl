@@ -156,19 +156,19 @@ Transforms `surf` into a mesh using [`makemesh`](@ref) and draws the result.
 `numdivisions` determines the resolution with which the mesh is triangulated.
 `kwargs` is passed on to the [`TriangleMesh`](@ref) drawing function.
 """
-function draw!(mf::MeshFigure, surf::Surface{T};
+function draw!(fig::MeshFigure, surf::Surface{T};
     numdivisions::Int=30,
     normals::Bool=false,
     normalcolor=:blue,
     kwargs...
 ) where {T<:Real}
 
-    ax = axis(mf)
+    ax = axis(fig)
     mesh = makemesh(surf, numdivisions)
     if nothing === mesh
         return
     end
-    draw!(ax, mesh; kwargs..., normals=false)
+    draw!(fig, mesh; kwargs..., normals=false)
     if normals
         ndirs = Makie.Point3f.(samplesurface(surf, normal, numdivisions ÷ 10))
         norigins = Makie.Point3f.(samplesurface(surf, point, numdivisions ÷ 10))
@@ -181,7 +181,7 @@ end
 
 Draw a [`TriangleMesh`](@ref), optionially with a visible `wireframe`. `kwargs` are passed on to [`Makie.mesh`](http://makie.juliaplots.org/stable/plotting_functions.html#mesh).
 """
-function draw!(ax::Makie.AbstractAxis, tmesh::TriangleMesh{T};
+function draw!(fig::MeshFigure, tmesh::TriangleMesh{T};
     debug::Bool=false,  # make sure debug does not end up in kwargs (Makie would error)
     linewidth=3,
     shaded::Bool=true,
@@ -192,7 +192,10 @@ function draw!(ax::Makie.AbstractAxis, tmesh::TriangleMesh{T};
     transparency::Bool=false,
     kwargs...
 ) where {T<:Real}
+
+    ax = axis(fig)
     points, indices = makiemesh(tmesh)
+
     if length(points) > 0 && length(indices) > 0
         shading = default_shading(shaded)
         Makie.mesh!(ax, points, indices; kwargs..., color=color, shading, transparency=transparency, visible=shaded)
@@ -221,8 +224,8 @@ end
 
 Convert a CSG object ([`CSGTree`](@ref) or [`CSGGenerator`](@ref)) to a mesh using [`makemesh`](@ref) with resolution set by `numdivisions` and draw the resulting [`TriangleMesh`](@ref).
 """
-draw!(ax::Makie.AbstractAxis, csg::CSGTree{T}; numdivisions::Int=30, kwargs...) where {T<:Real} = draw!(ax, makemesh(csg, numdivisions); kwargs...)
-draw!(ax::Makie.AbstractAxis, csg::CSGGenerator{T}; kwargs...) where {T<:Real} = draw!(ax, csg(); kwargs...)
+draw!(fig::MeshFigure, csg::CSGTree{T}; numdivisions::Int=30, kwargs...) where {T<:Real} = draw!(fig, makemesh(csg, numdivisions); kwargs...)
+draw!(fig::MeshFigure, s, csg::CSGGenerator{T}; kwargs...) where {T<:Real} = draw!(fig, csg(); kwargs...)
 
 """
     draw!(ax::Makie.AbstractAxis, bbox::BoundingBox{T}; kwargs...)
@@ -249,9 +252,9 @@ end
 
 Draw each element in a [`LensAssembly`](@ref), with each element automatically colored differently.
 """
-function draw!(ax::Makie.AbstractAxis, ass::LensAssembly{T}; kwargs...) where {T<:Real}
+function draw!(fig::MeshFigure, ass::LensAssembly{T}; kwargs...) where {T<:Real}
     for (i, e) in enumerate(elements(ass))
-        draw!(ax, e; kwargs..., color=indexedcolor2(i))
+        draw!(fig, e; kwargs..., color=indexedcolor2(i))
     end
 end
 
@@ -260,12 +263,14 @@ end
 
 Draw each element in the lens assembly of an [`AbstractOpticalSystem`](@ref), with each element automatically colored differently, as well as the detector of the system.
 """
-function draw!(ax::Makie.AbstractAxis, sys::CSGOpticalSystem{T}; kwargs...) where {T<:Real}
-    draw!(ax, sys.assembly; kwargs...)
-    draw!(ax, sys.detector; kwargs...)
+function draw!(fig::MeshFigure, sys::CSGOpticalSystem{T}; kwargs...) where {T<:Real}
+    draw!(fig, sys.assembly; kwargs...)
+    draw!(fig, sys.detector; kwargs...)
 end
 
-draw!(ax::Makie.AbstractAxis, sys::AxisymmetricOpticalSystem{T}; kwargs...) where {T<:Real} = draw!(ax, sys.system; kwargs...)
+function draw!(fig::MeshFigure, sys::AxisymmetricOpticalSystem{T}; kwargs...) where {T<:Real}
+    draw!(fig, sys.system; kwargs...)
+end
 
 
 onlydetectorrays(system::Q, tracevalue::LensTrace{T,3}) where {T<:Real,Q<:AbstractOpticalSystem{T}} = onsurface(detector(system), point(tracevalue))
@@ -283,27 +288,13 @@ By default only ray paths that eventually intersect the detector surface are dis
 
 Also `drawtracerays!` to add to an existing Axis, with `drawsys` and `drawgen` to specify whether `system` and `raygenerator` should be drawn respectively.
 """
-function drawtracerays(system::Q; raygenerator::S=Source(transform=translation(0.0, 0.0, 10.0), origins=Origins.RectGrid(10.0, 10.0, 25, 25), directions=Constant(0.0, 0.0, -1.0)), test::Bool=false, trackallrays::Bool=false, colorbysourcenum::Bool=false, colorbynhits::Bool=false, rayfilter::Union{Nothing,Function}=onlydetectorrays, verbose::Bool=false, resolution::Tuple{Int,Int}=(1000, 1000), kwargs...) where {T<:Real,Q<:AbstractOpticalSystem{T},S<:AbstractRayGenerator{T}}
-    verbose && println("Drawing System...")
-    s, ls = Vis.scene(resolution)
-
-    drawtracerays!(ls, system, raygenerator=raygenerator, test=test, colorbysourcenum=colorbysourcenum, colorbynhits=colorbynhits, rayfilter=rayfilter, trackallrays=trackallrays, verbose=verbose, drawsys=true, drawgen=true; kwargs...)
-
-    display(s)
-    if (get_current_mode() == :pluto || get_current_mode() == :docs)
-        return s
-    end
-end
-
-drawtracerays!(system::Q; kwargs...) where {T<:Real,Q<:AbstractOpticalSystem{T}} = drawtracerays!(current_3d_scene, system; kwargs...)
-
-function drawtracerays!(ax::Makie.AbstractAxis, system::Q; raygenerator::S=Source(transform=translation(0.0, 0.0, 10.0), origins=Origins.RectGrid(10.0, 10.0, 25, 25), directions=Constant(0.0, 0.0, -1.0)), test::Bool=false, trackallrays::Bool=false, colorbysourcenum::Bool=false, colorbynhits::Bool=false, rayfilter::Union{Nothing,Function}=onlydetectorrays, verbose::Bool=false, drawsys::Bool=false, drawgen::Bool=false, kwargs...) where {T<:Real,Q<:AbstractOpticalSystem{T},S<:AbstractRayGenerator{T}}
+function drawtracerays!(fig::MeshFigure, system::Q; raygenerator::S=Source(transform=translation(0.0, 0.0, 10.0), origins=Origins.RectGrid(10.0, 10.0, 25, 25), directions=Constant(0.0, 0.0, -1.0)), test::Bool=false, trackallrays::Bool=false, colorbysourcenum::Bool=false, colorbynhits::Bool=false, rayfilter::Union{Nothing,Function}=onlydetectorrays, verbose::Bool=false, drawsys::Bool=false, drawgen::Bool=false, kwargs...) where {T<:Real,Q<:AbstractOpticalSystem{T},S<:AbstractRayGenerator{T}}
     raylines = Vector{LensTrace{T,3}}(undef, 0)
 
     drawgen && draw!(scene, raygenerator; kwargs...)
-    drawsys && draw!(ax, system; kwargs...)
+    drawsys && draw!(fig, system; kwargs...)
 
-    verbose && println("Tracing...")
+    verbose && @info "Tracing..."
     for (i, r) in enumerate(raygenerator)
         if i % 1000 == 0 && verbose
             print("\r $i / $(length(raygenerator))")
@@ -328,10 +319,10 @@ function drawtracerays!(ax::Makie.AbstractAxis, system::Q; raygenerator::S=Sourc
             end
         end
     end
-    verbose && print("\r")
 
-    verbose && println("Drawing Rays...")
-    draw!(ax, raylines, colorbysourcenum=colorbysourcenum, colorbynhits=colorbynhits; kwargs...)
+    verbose && @info "Drawing Rays..."
+    draw!(fig, raylines, colorbysourcenum=colorbysourcenum, colorbynhits=colorbynhits; kwargs...)
+    return figure(fig)
 end
 
 """
@@ -364,10 +355,11 @@ end
 
 Draw a vector of [`Ray`](@ref) or [`OpticalRay`](@ref) objects.
 """
-function draw!(ax::Makie.AbstractAxis, rays::AbstractVector{<:AbstractRay{T,N}}; kwargs...) where {T<:Real,N}
+function draw!(fig::MeshFigure, rays::AbstractVector{<:AbstractRay{T,N}}; kwargs...) where {T<:Real,N}
     for r in rays
-        draw!(ax, r; kwargs...)
+        draw!(fig, r; kwargs...)
     end
+    return figure(fig)
 end
 
 """
@@ -375,10 +367,11 @@ end
 
 Draw a vector of [`LensTrace`](@ref) objects.
 """
-function draw!(ax::Makie.AbstractAxis, traces::AbstractVector{LensTrace{T,N}}; kwargs...) where {T<:Real,N}
+function draw!(fig::MeshFigure, traces::AbstractVector{LensTrace{T,N}}; kwargs...) where {T<:Real,N}
     for t in traces
-        draw!(ax, t; kwargs...)
+        draw!(fig, t; kwargs...)
     end
+    return figure(fig)
 end
 
 """
@@ -387,7 +380,7 @@ end
 Draw a [`LensTrace`](@ref) as a line which can be colored automatically by its `sourcenum` or `nhits` attributes.
 The alpha is determined by the `power` attribute of `trace`.
 """
-function draw!(ax::Makie.AbstractAxis, trace::LensTrace{T,N}; colorbysourcenum::Bool=false, colorbynhits::Bool=false, kwargs...) where {T<:Real,N}
+function draw!(fig::MeshFigure, trace::LensTrace{T,N}; colorbysourcenum::Bool=false, colorbynhits::Bool=false, kwargs...) where {T<:Real,N}
     if colorbysourcenum
         color = indexedcolor(sourcenum(trace))
     elseif colorbynhits
@@ -395,7 +388,8 @@ function draw!(ax::Makie.AbstractAxis, trace::LensTrace{T,N}; colorbysourcenum::
     else
         color = λtoRGB(wavelength(trace))
     end
-    draw!(ax, (origin(ray(trace)), point(intersection(trace))); kwargs..., color=RGBA(color.r, color.g, color.b, sqrt(power(trace))), transparency=true)
+    draw!(fig, (origin(ray(trace)), point(intersection(trace))); kwargs..., color=RGBA(color.r, color.g, color.b, sqrt(power(trace))), transparency=true)
+    return figure(fig)
 end
 
 """
@@ -405,7 +399,8 @@ Draw an [`OpticalRay`](@ref) which can be colored automatically by its `sourcenu
 The alpha of the ray is determined by the `power` attribute of `ray`.
 `kwargs` are passed to `draw!(ax, ray::Ray)`.
 """
-function draw!(ax::Makie.AbstractAxis, r::OpticalRay{T,N}; colorbysourcenum::Bool=false, colorbynhits::Bool=false, kwargs...) where {T<:Real,N}
+function draw!(fig::MeshFigure, r::OpticalRay{T,N}; colorbysourcenum::Bool=false, colorbynhits::Bool=false, kwargs...) where {T<:Real,N}
+    ax = axis(fig)
     if colorbysourcenum
         color = indexedcolor(sourcenum(r))
     elseif colorbynhits
@@ -413,16 +408,17 @@ function draw!(ax::Makie.AbstractAxis, r::OpticalRay{T,N}; colorbysourcenum::Boo
     else
         color = λtoRGB(wavelength(r))
     end
-    draw!(ax, ray(r); kwargs..., color=RGBA(color.r, color.g, color.b, sqrt(power(r))), transparency=true, rayscale=power(r))
+    makie_draw!(ax, ray(r); kwargs..., color=RGBA(color.r, color.g, color.b, sqrt(power(r))), transparency=true, rayscale=power(r))
+    return figure(fig)
 end
 
 """
-    draw!(ax::Makie.AbstractAxis, ray::Ray{T,N}; color = :yellow, rayscale = 1.0, kwargs...)
+    makie_draw!(ax::Makie.AbstractAxis, ray::Ray{T,N}; color = :yellow, rayscale = 1.0, kwargs...)
 
 Draw a [`Ray`](@ref) in a given `color` optionally scaling the size using `rayscale`.
 `kwargs` are passed to [`Makie.arrows`](http://makie.juliaplots.org/stable/plotting_functions.html#arrows).
 """
-function draw!(ax::Makie.AbstractAxis, ray::AbstractRay{T,N};
+function makie_draw!(ax::Makie.AbstractAxis, ray::AbstractRay{T,N};
     color=:yellow,
     debug::Bool=false,  # make sure debug does not end up in kwargs (Makie would error)
     rayscale=1.0,
@@ -437,8 +433,8 @@ end
 
 Draw each [`Interval`](@ref) in a [`DisjointUnion`](@ref).
 """
-function draw!(ax::Makie.AbstractAxis, du::DisjointUnion{T}; kwargs...) where {T<:Real}
-    draw!(ax, intervals(du); kwargs...)
+function draw!(fig::MeshFigure, du::DisjointUnion{T}; kwargs...) where {T<:Real}
+    draw!(fig, intervals(du); kwargs...)
 end
 
 """
@@ -446,9 +442,9 @@ end
 
 Draw a vector of [`Interval`](@ref)s.
 """
-function draw!(ax::Makie.AbstractAxis, intervals::AbstractVector{Interval{T}}; kwargs...) where {T<:Real}
+function draw!(fig::MeshFigure, intervals::AbstractVector{Interval{T}}; kwargs...) where {T<:Real}
     for i in intervals
-        draw!(ax, i; kwargs...)
+        draw!(fig, i; kwargs...)
     end
 end
 
@@ -457,22 +453,22 @@ end
 
 Draw an [`Interval`](@ref) as a line with circles at each [`Intersection`](@ref) point.
 """
-function draw!(ax::Makie.AbstractAxis, interval::Interval{T}; kwargs...) where {T<:Real}
+function draw!(fig::MeshFigure, interval::Interval{T}; kwargs...) where {T<:Real}
     if !(interval isa EmptyInterval)
         l = lower(interval)
         u = upper(interval)
         if !(l isa RayOrigin)
-            draw!(ax, l)
+            draw!(fig, l)
         else
             @warn "Negative half space, can't draw ray origin"
         end
         if !(u isa Infinity)
-            draw!(ax, u)
+            draw!(fig, u)
         else
             @warn "Positive half space, can't draw end point"
         end
         if !(l isa RayOrigin) && !(u isa Infinity)
-            draw!(ax, (point(l), point(u)); kwargs...)
+            draw!(fig, (point(l), point(u)); kwargs...)
         end
     end
 end
@@ -482,10 +478,10 @@ end
 
 Draw an [`Intersection`](@ref) as a circle, optionally showing the surface normal at the point.
 """
-function draw!(ax::Makie.AbstractAxis, intersection::Intersection; normal::Bool=false, kwargs...)
-    draw!(ax, point(intersection); kwargs...)
+function draw!(fig::MeshFigure, intersection::Intersection; normal::Bool=false, kwargs...)
+    draw!(fig, point(intersection); kwargs...)
     if normal
-        draw!(ax, Ray(point(intersection), normal(intersection)); kwargs...)
+        draw!(fig, Ray(point(intersection), normal(intersection)); kwargs...)
     end
 end
 
@@ -505,11 +501,12 @@ end
 
 Draw a line between two points, `kwargs` are passed to [`Makie.linesegments`](http://makie.juliaplots.org/stable/plotting_functions.html#linesegments).
 """
-function draw!(ax::Makie.AbstractAxis, line::Tuple{P,P};
+function draw!(fig::MeshFigure, line::Tuple{P,P};
     debug::Bool=false,  # make sure debug does not end up in kwargs (Makie would error)
     color=:yellow,
     kwargs...
 ) where {T<:Real,P<:AbstractVector{T}}
+    ax = axis(fig)
     Makie.linesegments!(ax, [line[1], line[2]]; kwargs..., color=color)
 end
 

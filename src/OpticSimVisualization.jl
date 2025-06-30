@@ -25,6 +25,7 @@ using DataFrames
 
 include("Visualization.jl")
 include("Emitters.jl")
+include("docs_examples.jl")
 
 
 end # module Vis
