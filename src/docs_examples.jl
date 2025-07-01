@@ -11,7 +11,7 @@ function draw_cooketriplet()
         SurfaceType=["Object", "Standard", "Standard", "Standard", "Stop", "Standard", "Standard", "Image"],
         Radius=[Inf, 26.777, 66.604, -35.571, 35.571, 35.571, -26.777, Inf],
         Thickness=[Inf, 4.0, 2.0, 4.0, 2.0, 4.0, 44.748, missing],
-        Material=[OpticSim.Air, g1, OpticSim.Air, g2, OpticSim.Air, g1, OpticSim.Air, missing],
+        Material=[OpticSim.AGFFileReader.Air, g1, OpticSim.AGFFileReader.Air, g2, OpticSim.AGFFileReader.Air, g1, OpticSim.AGFFileReader.Air, missing],
         SemiDiameter=[Inf, 8.580, 7.513, 7.054, 6.033, 7.003, 7.506, 15.0],
     ))
 
@@ -30,11 +30,12 @@ function draw_cooketriplet()
 end
 
 function draw_zoomlenses(filenames::Vector{<:Union{Nothing,AbstractString}}=repeat([nothing], 3))
+    AGFFileReader.initialize_AGFFileReader() #add glass names to AGFFileReader namespace
     stops = [2.89, 3.99, 4.90]
     zooms = [9.48, 4.48, 2.00]
     dists = [4.46970613, 21.21, 43.81]
 
-    transform = translation(0.0, 0.0, 10.0)
+    transform = OpticSim.Geometry.translation(0.0, 0.0, 10.0)
     origins = Origins.Hexapolar(8, 10.0, 10.0)
     directions = Directions.Constant(0.0, 0.0, -1.0)
     raygenerator = OpticSim.Emitters.Sources.Source(; transform, origins, directions)
@@ -50,24 +51,27 @@ function draw_zoomlenses(filenames::Vector{<:Union{Nothing,AbstractString}}=repe
             Radius=[Inf64, Inf64, -1.6202203499676E+01, -4.8875855327468E+01, 1.5666614444619E+01, -4.2955326460481E+01, 1.0869565217391E+02, 2.3623907394283E+01, -1.6059097478722E+01, -4.2553191489362E+02, -3.5435861091425E+01, -1.4146272457208E+01, -2.5125628140704E+02, -2.2502250225023E+01, -1.0583130489999E+01, -4.4444444444444E+01, Inf64],
             Parameters=[missing, missing, missing, missing, missing, aspherics[1], missing, missing, aspherics[2], aspherics[3], missing, missing, missing, missing, missing, missing, missing],
             Thickness=[Inf64, 0.0, 5.18, 0.10, 4.40, 0.16, 1.0, 4.96, zoom, 4.04, 1.35, 1.0, 2.80, 3.0, 1.22, dist, missing],
-            Material=[Air, Air, OHARA.S_LAH66, Air, NIKON.LLF6, Air, OHARA.S_TIH6, OHARA.S_FSL5, Air, OHARA.S_FSL5, Air, OHARA.S_LAL8, OHARA.S_FSL5, Air, OHARA.S_LAH66, Air, missing],
+            Material=[AGFFileReader.Air, AGFFileReader.Air, AGFFileReader.OHARA.S_LAH66, AGFFileReader.Air, AGFFileReader.NIKON.LLF6, AGFFileReader.Air, AGFFileReader.OHARA.S_TIH6, AGFFileReader.OHARA.S_FSL5, AGFFileReader.Air, AGFFileReader.OHARA.S_FSL5, AGFFileReader.Air, AGFFileReader.OHARA.S_LAL8, AGFFileReader.OHARA.S_FSL5, AGFFileReader.Air, AGFFileReader.OHARA.S_LAH66, AGFFileReader.Air, missing],
             SemiDiameter=[Inf64, stop, 3.85433218451, 3.85433218451, 4.36304692871, 4.36304692871, 4.72505505439, 4.72505505439, 4.72505505439, 4.45240784026, 4.45240784026, 4.50974054117, 4.50974054117, 4.50974054117, 4.76271114409, 4.76271114409, 15.0]))
         for (stop, zoom, dist) in zip(stops, zooms, dists)]
 
-    for (sys, filename) in zip(syss, filenames)
-        Vis.drawtracerays(sys; raygenerator, trackallrays=true, test=true, numdivisions=50, resolution=(1200, 600))
-        Vis.make2dy()
-        Vis.save(filename)
+    fig = MeshFigure()
+    for sys in syss
+        win = GLMakie.Screen()
+        clear!(fig)
+        temp = Vis.drawtracerays(fig, sys; raygenerator, trackallrays=true, test=true, numdivisions=50, resolution=(1200, 600))
+        display(win, temp)
     end
     return syss
 end
 
-function draw_schmidtcassegraintelescope(filename::Union{Nothing,AbstractString}=nothing)
+
+function draw_schmidtcassegraintelescope()
     # glass entrance lens on telescope
     topsurf = Plane(
         SVector(0.0, 0.0, 1.0),
         SVector(0.0, 0.0, 0.0),
-        interface=FresnelInterface{Float64}(Examples_N_BK7, Air),
+        interface=FresnelInterface{Float64}(AGFFileReader.Examples_N_BK7, AGFFileReader.Air),
         vishalfsizeu=12.00075,
         vishalfsizev=12.00075)
     botsurf = AcceleratedParametricSurface(ZernikeSurface(
@@ -75,41 +79,42 @@ function draw_schmidtcassegraintelescope(filename::Union{Nothing,AbstractString}
             radius=-1.14659768e+4,
             aspherics=[(4, 3.68090959e-7), (6, 2.73643352e-11), (8, 3.20036892e-14)]),
         17,
-        interface=FresnelInterface{Float64}(Examples_N_BK7, Air))
-    coverlens = Cylinder(12.00075, 1.4) ∩ topsurf ∩ leaf(botsurf, Transform(rotmatd(0, 180, 0), Vec3(0.0, 0.0, -0.65)))
+        interface=FresnelInterface{Float64}(AGFFileReader.Examples_N_BK7, AGFFileReader.Air))
+    coverlens = Cylinder(12.00075, 1.4) ∩ topsurf ∩ leaf(botsurf, Transform(rotmatd(0, 180, 0), OpticSim.Geometry.Vec3(0.0, 0.0, -0.65)))
 
     # big mirror with a hole in it
     frontsurfacereflectance = 1.0
     bigmirror = (
-        ConicLens(Examples_N_BK7, -72.65, -95.2773500000134, 0.077235, Inf, 0.0, 0.2, 12.18263; frontsurfacereflectance) -
-        leaf(Cylinder(4.0, 0.3, interface=opaqueinterface()), translation(0.0, 0.0, -72.75))
+        ConicLens(AGFFileReader.Examples_N_BK7, -72.65, -95.2773500000134, 0.077235, Inf, 0.0, 0.2, 12.18263; frontsurfacereflectance) -
+        leaf(Cylinder(4.0, 0.3, interface=opaqueinterface()), OpticSim.Geometry.translation(0.0, 0.0, -72.75))
     )
 
     # small mirror supported on a spider
     backsurfacereflectance = 1.0
-    smallmirror = SphericalLens(Examples_N_BK7, -40.65, Inf, -49.6845, 1.13365, 4.3223859; backsurfacereflectance)
+    smallmirror = SphericalLens(AGFFileReader.Examples_N_BK7, -40.65, Inf, -49.6845, 1.13365, 4.3223859; backsurfacereflectance)
 
-    obscuration1 = Circle(4.5, SVector(0.0, 0.0, 1.0), SVector(0.0, 0.0, -40.649), interface=opaqueinterface())
+    obscuration1 = OpticSim.Geometry.Circle(4.5, SVector(0.0, 0.0, 1.0), SVector(0.0, 0.0, -40.649), interface=opaqueinterface())
     obscurations2 = Spider(3, 0.5, 12.0, SVector(0.0, 0.0, -40.65))
 
     # put it together with the detector
     la = LensAssembly(coverlens(), bigmirror(), smallmirror(), obscuration1, obscurations2...)
-    det = Circle(3.0, SVector(0.0, 0.0, 1.0), SVector(0.0, 0.0, -92.4542988), interface=opaqueinterface())
+    det = OpticSim.Geometry.Circle(3.0, SVector(0.0, 0.0, 1.0), SVector(0.0, 0.0, -92.4542988), interface=opaqueinterface())
     sys = CSGOpticalSystem(la, det)
 
     # define ray generator
-    transform = translation(0.0, 0.0, 10.0)
+    transform = OpticSim.Geometry.translation(0.0, 0.0, 10.0)
     origins = Origins.Hexapolar(8, 20.0, 20.0)
     directions = Directions.Constant(0.0, 0.0, -1.0)
     raygenerator = OpticSim.Emitters.Sources.Source(; transform, origins, directions)
 
     # draw and output
-    Vis.drawtracerays(sys; raygenerator, trackallrays=true, colorbynhits=true, test=true, numdivisions=100, drawgen=false)
-    Vis.save(filename)
-    return nothing
+    fig = MeshFigure()
+    draw!(fig, sys)
+    drawtracerays!(fig, sys; raygenerator, trackallrays=true, colorbynhits=true, test=true, drawgen=false)
+    return figure(fig)
 end
 
-function draw_lensconstruction(filename::Union{Nothing,AbstractString}=nothing)
+function draw_lensconstruction()
     topsurface = leaf(
         AcceleratedParametricSurface(
             QTypeSurface(
@@ -119,24 +124,25 @@ function draw_lensconstruction(filename::Union{Nothing,AbstractString}=nothing)
                 αcoeffs=[(1, 0, 0.3), (1, 1, 1.0)],
                 βcoeffs=[(1, 0, -0.1), (2, 0, 0.4), (3, 0, -0.6)],
                 normradius=9.5),
-            interface=FresnelInterface{Float64}(Examples_N_BK7, Air)),
-        translation(0.0, 0.0, 5.0))
+            interface=FresnelInterface{Float64}(AGFFileReader.Examples_N_BK7, AGFFileReader.Air)),
+        OpticSim.Geometry.translation(0.0, 0.0, 5.0))
     botsurface = Plane(
         SVector(0.0, 0.0, -1.0),
         SVector(0.0, 0.0, -5.0),
         vishalfsizeu=9.5,
         vishalfsizev=9.5,
-        interface=FresnelInterface{Float64}(Examples_N_BK7, Air))
+        interface=FresnelInterface{Float64}(AGFFileReader.Examples_N_BK7, AGFFileReader.Air))
     barrel = Cylinder(
-        9.0, 20.0, interface=FresnelInterface{Float64}(Examples_N_BK7, Air, reflectance=0.0, transmission=0.0)
+        9.0, 20.0, interface=FresnelInterface{Float64}(AGFFileReader.Examples_N_BK7, AGFFileReader.Air, reflectance=0.0, transmission=0.0)
     )
     lens = (barrel ∩ topsurface ∩ botsurface)(Transform(0.0, Float64(π), 0.0, 0.0, 0.0, -5.0))
     detector = Rectangle(15.0, 15.0, [0.0, 0.0, 1.0], [0.0, 0.0, -67.8], interface=opaqueinterface())
     sys = CSGOpticalSystem(LensAssembly(lens), detector)
+    fig = MeshFigure()
+    draw!(fig, sys)
+    drawtracerays!(fig, sys, test=true, trackallrays=true, colorbynhits=true)
 
-    Vis.drawtracerays(sys, test=true, trackallrays=true, colorbynhits=true)
-    Vis.save(filename)
-    return nothing
+    return figure(fig)
 end
 
 function draw_HOEfocus(filename::Union{Nothing,AbstractString}=nothing)
@@ -144,7 +150,7 @@ function draw_HOEfocus(filename::Union{Nothing,AbstractString}=nothing)
     int = HologramInterface(
         SVector(0.0, -3.0, -20.0), ConvergingBeam,
         SVector(0.0, 0.0, -1.0), CollimatedBeam,
-        0.55, 9.0, Air, Examples_N_BK7, Air, Air, Air, 0.05, false)
+        0.55, 9.0, AGFFileReader.Air, Examples_N_BK7, AGFFileReader.Air, AGFFileReader.Air, AGFFileReader.Air, 0.05, false)
     obj = HologramSurface(rect, int)
     sys = CSGOpticalSystem(
         LensAssembly(obj),
@@ -167,7 +173,7 @@ function draw_HOEcollimate(filename::Union{Nothing,AbstractString}=nothing)
     int = HologramInterface(
         SVector(0.1, -0.05, -1.0), CollimatedBeam,
         SVector(0.0, 0.0, 10), DivergingBeam,
-        0.55, 9.0, Air, Examples_N_BK7, Air, Air, Air, 0.05, false)
+        0.55, 9.0, AGFFileReader.Air, Examples_N_BK7, AGFFileReader.Air, AGFFileReader.Air, AGFFileReader.Air, 0.05, false)
     obj = HologramSurface(rect, int)
     sys = CSGOpticalSystem(
         LensAssembly(obj),
@@ -190,11 +196,11 @@ function draw_multiHOE(filename::Union{Nothing,AbstractString}=nothing)
     int1 = HologramInterface(
         SVector(-5.0, 0.0, -20.0), ConvergingBeam,
         SVector(0.0, -1.0, -1.0), CollimatedBeam,
-        0.55, 100.0, Air, Examples_N_BK7, Air, Air, Air, 0.05, false)
+        0.55, 100.0, AGFFileReader.Air, Examples_N_BK7, AGFFileReader.Air, AGFFileReader.Air, AGFFileReader.Air, 0.05, false)
     int2 = HologramInterface(
         SVector(5.0, 0.0, -20.0), ConvergingBeam,
         SVector(0.0, 1.0, -1.0), CollimatedBeam,
-        0.55, 100.0, Air, Examples_N_BK7, Air, Air, Air, 0.05, false)
+        0.55, 100.0, AGFFileReader.Air, Examples_N_BK7, AGFFileReader.Air, AGFFileReader.Air, AGFFileReader.Air, 0.05, false)
     mint = MultiHologramInterface(int1, int2)
     obj = MultiHologramSurface(rect, mint)
     sys = CSGOpticalSystem(
@@ -224,7 +230,7 @@ function draw_stackedbeamsplitters(filenames::Vector{<:Union{Nothing,AbstractStr
     interfacemodes = [ReflectOrTransmit, Transmit, Reflect]
 
     for (interfacemode, filename) in zip(interfacemodes, filenames)
-        interface = FresnelInterface{Float64}(Examples_N_BK7, Air; reflectance=0.5, transmission=0.5, interfacemode)
+        interface = FresnelInterface{Float64}(Examples_N_BK7, AGFFileReader.Air; reflectance=0.5, transmission=0.5, interfacemode)
         bs_1 = OpticSim.transform(
             Cuboid(10.0, 20.0, 2.0, interface=interface),
             translation(0.0, 0.0, -30.0 - 2 * sqrt(2)) * rotationX(π / 4))

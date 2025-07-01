@@ -22,6 +22,7 @@ import GeometryBasics
 import Plots
 using FileIO
 using DataFrames
+import AGFFileReader
 
 include("Visualization.jl")
 include("Emitters.jl")
