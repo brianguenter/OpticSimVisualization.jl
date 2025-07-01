@@ -150,7 +150,7 @@ function draw_HOEfocus(filename::Union{Nothing,AbstractString}=nothing)
     int = HologramInterface(
         SVector(0.0, -3.0, -20.0), ConvergingBeam,
         SVector(0.0, 0.0, -1.0), CollimatedBeam,
-        0.55, 9.0, AGFFileReader.Air, Examples_N_BK7, AGFFileReader.Air, AGFFileReader.Air, AGFFileReader.Air, 0.05, false)
+        0.55, 9.0, AGFFileReader.Air, AGFFileReader.Examples_N_BK7, AGFFileReader.Air, AGFFileReader.Air, AGFFileReader.Air, 0.05, false)
     obj = HologramSurface(rect, int)
     sys = CSGOpticalSystem(
         LensAssembly(obj),
@@ -158,14 +158,16 @@ function draw_HOEfocus(filename::Union{Nothing,AbstractString}=nothing)
             interface=opaqueinterface()))
 
     raygenerator = OpticSim.Emitters.Sources.Source(;
-        transform=translation(0.0, 0.0, 10.0),
+        transform=OpticSim.Geometry.translation(0.0, 0.0, 10.0),
         spectrum=Spectrum.DeltaFunction(0.55),
         origins=Origins.RectGrid(3.0, 3.0, 5, 5),
         directions=Directions.Constant(0.0, 0.0, -1.0))
 
-    Vis.drawtracerays(sys; raygenerator, trackallrays=true, rayfilter=nothing, test=true)
-    Vis.save(filename)
-    return nothing
+    fig = MeshFigure()
+    draw!(fig, sys)
+    drawtracerays(sys; raygenerator, trackallrays=true, rayfilter=nothing, test=true)
+
+    return figure(fig)
 end
 
 function draw_HOEcollimate(filename::Union{Nothing,AbstractString}=nothing)
@@ -223,37 +225,45 @@ function draw_multiHOE(filename::Union{Nothing,AbstractString}=nothing)
     return nothing
 end
 
-function draw_stackedbeamsplitters(filenames::Vector{<:Union{Nothing,AbstractString}}=repeat([nothing], 3))
+function draw_stackedbeamsplitters()
     # ReflectOrTransmit: nondeterministic
     # Transmit: deterministic, all beamsplitters transmissive
     # Reflect: deterministic, all beamsplitters reflective
     interfacemodes = [ReflectOrTransmit, Transmit, Reflect]
 
-    for (interfacemode, filename) in zip(interfacemodes, filenames)
-        interface = FresnelInterface{Float64}(Examples_N_BK7, AGFFileReader.Air; reflectance=0.5, transmission=0.5, interfacemode)
+    for interfacemode in interfacemodes
+        interface = FresnelInterface{Float64}(AGFFileReader.Examples_N_BK7, AGFFileReader.Air; reflectance=0.5, transmission=0.5, interfacemode)
         bs_1 = OpticSim.transform(
             Cuboid(10.0, 20.0, 2.0, interface=interface),
-            translation(0.0, 0.0, -30.0 - 2 * sqrt(2)) * rotationX(π / 4))
+            OpticSim.Geometry.translation(0.0, 0.0, -30.0 - 2 * sqrt(2)) * OpticSim.Geometry.rotationX(π / 4))
 
         l1 = OpticSim.transform(
-            SphericalLens(Examples_N_BK7, -70.0, 30.0, Inf, 5.0, 10.0),
-            translation(0.0, -1.34, 0.0))
+            SphericalLens(AGFFileReader.Examples_N_BK7, -70.0, 30.0, Inf, 5.0, 10.0),
+            OpticSim.Geometry.translation(0.0, -1.34, 0.0))
 
         bs_2 = OpticSim.transform(
             Cuboid(10.0, 20.0, 2.0, interface=interface),
-            translation(0.0, 40.0, -30.0 + 2 * sqrt(2)) * rotationX(π / 4))
+            OpticSim.Geometry.translation(0.0, 40.0, -30.0 + 2 * sqrt(2)) * OpticSim.Geometry.rotationX(π / 4))
 
         l2 = OpticSim.transform(
-            SphericalLens(Examples_N_BK7, -70.0, 30.0, Inf, 5.0, 10.0),
-            translation(0.0, 40.0, 0.0))
+            SphericalLens(AGFFileReader.Examples_N_BK7, -70.0, 30.0, Inf, 5.0, 10.0),
+            OpticSim.Geometry.translation(0.0, 40.0, 0.0))
 
         la = LensAssembly(bs_1(), l1(), bs_2(), l2())
 
         detector = Rectangle(20.0, 40.0, SVector(0.0, 0.0, 1.0), SVector(0.0, 20.0, -130.0); interface=opaqueinterface())
         sys = CSGOpticalSystem(la, detector)
 
-        Vis.drawtracerays(sys; trackallrays=true, rayfilter=nothing, colorbynhits=true)
-        Vis.save(filename)
+        win = GLMakie.Screen()
+        fig = MeshFigure()
+        makie_fig = figure(fig)
+
+        draw!(fig, sys)
+        drawtracerays!(fig, sys; trackallrays=true, rayfilter=nothing, colorbynhits=true)
+        # Label(makie_fig[0, :], string(interfacemode), fontsize=30)
+        display(win, figure(fig))
     end
-    return nothing
 end
+
+
+
