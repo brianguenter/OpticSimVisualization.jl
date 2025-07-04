@@ -7,15 +7,15 @@ using OpticSim
 using OpticSimVisualization
 import Makie
 
-# override certain functions to allow production of interactive figures
-set_current_mode(:docs)
-
 
 makedocs(
     sitename="OpticSimVisualization.jl",
     modules=[OpticSimVisualization],
     pages=[
-        "Home" => "index.md"]
+        "Home" => "index.md",
+        "Reference" => "ref.md",
+    ],
+    checkdocs=:public
 )
 
 deploydocs(

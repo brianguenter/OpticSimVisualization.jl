@@ -22,7 +22,7 @@ Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
 [compat]
 AGFFileReader = "1.1.2"
 ColorSchemes = "3.29.0"
-ColorTypes = "0.11.5"
+ColorTypes = "0.12"
 DataFrames = "1.7.0"
 Distributions = "0.25.118"
 FileIO = "1.16.6"
