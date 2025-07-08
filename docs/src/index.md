@@ -8,3 +8,9 @@ There are a number of helper methods, as well as the ability to draw objects, su
 draw_cooketriplet()
 ```
 
+# Reference
+```@autodocs
+Modules = [OpticSimVisualization]
+Private = false
+```
+

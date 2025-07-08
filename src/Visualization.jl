@@ -153,10 +153,10 @@ indexedcolor2(i::Int) = ColorSchemes.hsv[1.0-rem(i / (2.1 * π), 1.0)] .* 0.5
 """
     draw!(ax::Makie.AbstractAxis, surf::Surface{T}; numdivisions = 20, normals = false, normalcolor = :blue, kwargs...)
 
-Transforms `surf` into a mesh using [`makemesh`](@ref) and draws the result.
+Transforms `surf` into a mesh using makemesh and draws the result.
 `normals` of the surface can be drawn at evenly sampled points with provided `normalcolor`.
 `numdivisions` determines the resolution with which the mesh is triangulated.
-`kwargs` is passed on to the [`TriangleMesh`](@ref) drawing function.
+`kwargs` is passed on to the TriangleMesh drawing function.
 """
 function draw!(fig::AbstractMeshFigure, surf::Surface{T};
     numdivisions::Int=30,
@@ -181,7 +181,7 @@ end
 """
     draw!(ax::Makie.AbstractAxis, tmesh::TriangleMesh{T}; linewidth = 3, shaded = true, wireframe = false, color = :orange, normals = false, normalcolor = :blue, transparency = false, kwargs...)
 
-Draw a [`TriangleMesh`](@ref), optionially with a visible `wireframe`. `kwargs` are passed on to [`Makie.mesh`](http://makie.juliaplots.org/stable/plotting_functions.html#mesh).
+Draw a TriangleMesh, optionially with a visible `wireframe`. `kwargs` are passed on to [`Makie.mesh`](http://makie.juliaplots.org/stable/plotting_functions.html#mesh).
 """
 function draw!(fig::AbstractMeshFigure, tmesh::TriangleMesh{T};
     debug::Bool=false,  # make sure debug does not end up in kwargs (Makie would error)
@@ -224,7 +224,7 @@ end
 """
     draw!(ax::Makie.AbstractAxis, csg::Union{CSGTree,CSGGenerator}; numdivisions::Int = 20, kwargs...)
 
-Convert a CSG object ([`CSGTree`](@ref) or [`CSGGenerator`](@ref)) to a mesh using [`makemesh`](@ref) with resolution set by `numdivisions` and draw the resulting [`TriangleMesh`](@ref).
+Convert a CSG object (CSGTree or makemesh) to a mesh using makemesh with resolution set by `numdivisions` and draw the resulting TriangleMesh.
 """
 draw!(fig::AbstractMeshFigure, csg::CSGTree{T}; numdivisions::Int=30, kwargs...) where {T<:Real} = draw!(fig, makemesh(csg, numdivisions); kwargs...)
 draw!(fig::AbstractMeshFigure, s, csg::CSGGenerator{T}; kwargs...) where {T<:Real} = draw!(fig, csg(); kwargs...)
@@ -232,7 +232,7 @@ draw!(fig::AbstractMeshFigure, s, csg::CSGGenerator{T}; kwargs...) where {T<:Rea
 """
     draw!(ax::Makie.AbstractAxis, bbox::BoundingBox{T}; kwargs...)
 
-Draw a [`BoundingBox`](@ref) as a wireframe, ie series of lines.
+Draw a BoundingBox as a wireframe, ie series of lines.
 """
 function draw!(meshfig::AbstractMeshFigure, bbox::BoundingBox{T}; kwargs...) where {T<:Real}
     ax = axis(meshfig)
@@ -252,7 +252,7 @@ end
 """
     draw!(ax::Makie.AbstractAxis, ass::LensAssembly; kwargs...)
 
-Draw each element in a [`LensAssembly`](@ref), with each element automatically colored differently.
+Draw each element in a LensAssembly, with each element automatically colored differently.
 """
 function draw!(fig::AbstractMeshFigure, ass::LensAssembly{T}; kwargs...) where {T<:Real}
     for (i, e) in enumerate(elements(ass))
@@ -263,7 +263,7 @@ end
 """
     draw!(ax::Makie.AbstractAxis, sys::AbstractOpticalSystem; kwargs...)
 
-Draw each element in the lens assembly of an [`AbstractOpticalSystem`](@ref), with each element automatically colored differently, as well as the detector of the system.
+Draw each element in the lens assembly of an AbstractOpticalSystem, with each element automatically colored differently, as well as the detector of the system.
 """
 function draw!(fig::AbstractMeshFigure, sys::CSGOpticalSystem{T}; kwargs...) where {T<:Real}
     draw!(fig, sys.assembly; kwargs...)
@@ -355,7 +355,7 @@ end
 """
     draw!(ax::Makie.AbstractAxis, rays::AbstractVector{<:AbstractRay{T,N}}; kwargs...)
 
-Draw a vector of [`Ray`](@ref) or [`OpticalRay`](@ref) objects.
+Draw a vector of Ray or OpticalRay objects.
 """
 function draw!(fig::AbstractMeshFigure, rays::AbstractVector{<:AbstractRay{T,N}}; kwargs...) where {T<:Real,N}
     for r in rays
@@ -367,7 +367,7 @@ end
 """
     draw!(ax::Makie.AbstractAxis, traces::AbstractVector{LensTrace{T,N}}; kwargs...)
 
-Draw a vector of [`LensTrace`](@ref) objects.
+Draw a vector of LensTrace objects.
 """
 function draw!(fig::AbstractMeshFigure, traces::AbstractVector{LensTrace{T,N}}; kwargs...) where {T<:Real,N}
     for t in traces
@@ -379,7 +379,7 @@ end
 """
     draw!(ax::Makie.AbstractAxis, trace::LensTrace{T,N}; colorbysourcenum::Bool = false, colorbynhits::Bool = false, kwargs...)
 
-Draw a [`LensTrace`](@ref) as a line which can be colored automatically by its `sourcenum` or `nhits` attributes.
+Draw a LensTrace as a line which can be colored automatically by its `sourcenum` or `nhits` attributes.
 The alpha is determined by the `power` attribute of `trace`.
 """
 function draw!(fig::AbstractMeshFigure, trace::LensTrace{T,N}; colorbysourcenum::Bool=false, colorbynhits::Bool=false, kwargs...) where {T<:Real,N}
@@ -397,7 +397,7 @@ end
 """
     draw!(ax::Makie.AbstractAxis, ray::OpticalRay{T,N}; colorbysourcenum::Bool = false, colorbynhits::Bool = false, kwargs...)
 
-Draw an [`OpticalRay`](@ref) which can be colored automatically by its `sourcenum` or `nhits` attributes.
+Draw an OpticalRay which can be colored automatically by its `sourcenum` or `nhits` attributes.
 The alpha of the ray is determined by the `power` attribute of `ray`.
 `kwargs` are passed to `draw!(ax, ray::Ray)`.
 """
@@ -417,7 +417,7 @@ end
 """
     makie_draw!(ax::Makie.AbstractAxis, ray::Ray{T,N}; color = :yellow, rayscale = 1.0, kwargs...)
 
-Draw a [`Ray`](@ref) in a given `color` optionally scaling the size using `rayscale`.
+Draw a Ray in a given `color` optionally scaling the size using `rayscale`.
 `kwargs` are passed to [`Makie.arrows`](http://makie.juliaplots.org/stable/plotting_functions.html#arrows).
 """
 function makie_draw!(ax::Makie.AbstractAxis, ray::AbstractRay{T,N};
@@ -433,7 +433,7 @@ end
 """
     draw!(ax::Makie.AbstractAxis, du::DisjointUnion{T}; kwargs...)
 
-Draw each [`Interval`](@ref) in a [`DisjointUnion`](@ref).
+Draw each Interval in a DisjointUion.
 """
 function draw!(fig::AbstractMeshFigure, du::DisjointUnion{T}; kwargs...) where {T<:Real}
     draw!(fig, intervals(du); kwargs...)
@@ -442,7 +442,7 @@ end
 """
     draw!(ax::Makie.AbstractAxis, intervals::AbstractVector{Interval{T}}; kwargs...)
 
-Draw a vector of [`Interval`](@ref)s.
+Draw a vector of Interval.
 """
 function draw!(fig::AbstractMeshFigure, intervals::AbstractVector{Interval{T}}; kwargs...) where {T<:Real}
     for i in intervals
@@ -453,7 +453,7 @@ end
 """
     draw!(ax::Makie.AbstractAxis, interval::Interval{T}; kwargs...)
 
-Draw an [`Interval`](@ref) as a line with circles at each [`Intersection`](@ref) point.
+Draw an Interval as a line with circles at each Intersection point.
 """
 function draw!(fig::AbstractMeshFigure, interval::Interval{T}; kwargs...) where {T<:Real}
     if !(interval isa EmptyInterval)
@@ -478,7 +478,7 @@ end
 """
     draw!(ax::Makie.AbstractAxis, intersection::Intersection; normal::Bool = false, kwargs...)
 
-Draw an [`Intersection`](@ref) as a circle, optionally showing the surface normal at the point.
+Draw an Intersection as a circle, optionally showing the surface normal at the point.
 """
 function draw!(fig::AbstractMeshFigure, intersection::Intersection; normal::Bool=false, kwargs...)
     draw!(fig, point(intersection); kwargs...)
@@ -600,7 +600,7 @@ end
 """
     spotdiag(sys::CSGOpticalSystem{T}, raygenerator::OpticalRayGenerator{T}; size = (500, 500), kwargs...)
 
-Plot a spot diagram for an arbitrary [`CSGOpticalSystem`](@ref) and [`OpticalRayGenerator`](@ref).
+Plot a spot diagram for an arbitrary CSGOpticalSystem and OpticalRayGenerator.
 All rays from `raygenerator` will be traced through `sys` and their intersection location on the detector plotted.
 
 Also `spotdiag!` of the same arguments to add to an existing plot.
@@ -665,7 +665,7 @@ end
 """
     surfacesag(object::Union{CSGTree{T},Surface{T}}, resolution::Tuple{Int,Int}, halfsizes::Tuple{T,T}; offset::T = T(10), position::SVector{3,T} = SVector{3,T}(0.0, 0.0, 10.0), direction::SVector{3,T} = SVector{3,T}(0.0, 0.0, -1.0), rotationvec::SVector{3,T} = SVector{3,T}(0.0, 1.0, 0.0))
 
-Calculates and displays the surface sag of an arbitrary [`Surface`](@ref) or [`CSGTree`](@ref).
+Calculates and displays the surface sag of an arbitrary Surface or CSGTree.
 
 Rays are shot in a grid of size defined by `resolution` across a arectangular area defined by `halfsizes`.
 This rectangle is centered at `position` with normal along `direction` and rotation defined by `rotationvec`.
