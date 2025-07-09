@@ -13,7 +13,6 @@ makedocs(
     modules=[OpticSimVisualization],
     pages=[
         "Home" => "index.md",
-        # "Reference" => "ref.md",
     ],
     checkdocs=:public
 )

@@ -10,7 +10,7 @@
 using GLMakie
 using FileIO
 import GeometryBasics
-using OpticSim: Surface, TriangleMesh, CSGTree, CSGGenerator, makemesh, makiemesh
+using OpticSim: Surface, TriangleMesh, CSGTree, CSGGenerator, makemesh, makiemesh, Intersection, LensTrace, OpticalRay, Ray, AbstractOpticalSystem, OpticalRayGenerator, LensAssembly, Interval, DisjointUnion, BoundingBox
 
 function brain()
     # Load the brain mesh from the asset path
@@ -76,6 +76,7 @@ function draw(meshfig::AbstractMeshFigure, mesh_object::GeometryBasics.Mesh; kwa
 end
 export draw
 
+"""Draws the mesh"""
 function draw!(meshfig::AbstractMeshFigure, mesh_object::GeometryBasics.Mesh;
     color=:gray,
     debug::Bool=false,  # make sure debug does not end up in kwargs (Makie would error)
@@ -227,6 +228,8 @@ end
 Convert a CSG object (CSGTree or makemesh) to a mesh using makemesh with resolution set by `numdivisions` and draw the resulting TriangleMesh.
 """
 draw!(fig::AbstractMeshFigure, csg::CSGTree{T}; numdivisions::Int=30, kwargs...) where {T<:Real} = draw!(fig, makemesh(csg, numdivisions); kwargs...)
+
+"""Draws the mesh"""
 draw!(fig::AbstractMeshFigure, s, csg::CSGGenerator{T}; kwargs...) where {T<:Real} = draw!(fig, csg(); kwargs...)
 
 """
@@ -270,6 +273,7 @@ function draw!(fig::AbstractMeshFigure, sys::CSGOpticalSystem{T}; kwargs...) whe
     draw!(fig, sys.detector; kwargs...)
 end
 
+"""Draws the mesh"""
 function draw!(fig::AbstractMeshFigure, sys::AxisymmetricOpticalSystem{T}; kwargs...) where {T<:Real}
     draw!(fig, sys.system; kwargs...)
 end
