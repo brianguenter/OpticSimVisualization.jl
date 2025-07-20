@@ -3,7 +3,7 @@
 # See LICENSE in the project root for full license information.
 
 # Group examples that are used in the docs (examples.md)
-export draw_cooketriplet, draw_schmidtcassegraintelescope, draw_lensconstruction, draw_zoomlenses, draw_HOEfocus, draw_HOEcollimate, draw_multiHOE, draw_stackedbeamsplitters
+export draw_cooketriplet, draw_schmidtcassegraintelescope, draw_lensconstruction, draw_zoomlenses, draw_HOEfocus, draw_HOEcollimate, draw_stackedbeamsplitters
 
 function draw_cooketriplet()
     g1, g2 = OpticSim.Examples_N_SK16, OpticSim.Examples_N_SF2
@@ -148,7 +148,7 @@ function draw_lensconstruction()
     return figure(fig)
 end
 
-function draw_HOEfocus(filename::Union{Nothing,AbstractString}=nothing)
+function draw_HOEfocus()
     rect = Rectangle(5.0, 5.0, SVector(0.0, 0.0, 1.0), SVector(0.0, 0.0, 0.0))
     int = HologramInterface(
         SVector(0.0, -3.0, -20.0), ConvergingBeam,
@@ -168,17 +168,17 @@ function draw_HOEfocus(filename::Union{Nothing,AbstractString}=nothing)
 
     fig = MeshFigure()
     draw!(fig, sys)
-    drawtracerays(sys; raygenerator, trackallrays=true, rayfilter=nothing, test=true)
+    drawtracerays!(fig, sys; raygenerator, trackallrays=true, rayfilter=nothing, test=true)
 
     return figure(fig)
 end
 
-function draw_HOEcollimate(filename::Union{Nothing,AbstractString}=nothing)
+function draw_HOEcollimate()
     rect = Rectangle(5.0, 5.0, SVector(0.0, 0.0, 1.0), SVector(0.0, 0.0, 0.0))
     int = HologramInterface(
         SVector(0.1, -0.05, -1.0), CollimatedBeam,
         SVector(0.0, 0.0, 10), DivergingBeam,
-        0.55, 9.0, AGFFileReader.Air, Examples_N_BK7, AGFFileReader.Air, AGFFileReader.Air, AGFFileReader.Air, 0.05, false)
+        0.55, 9.0, AGFFileReader.Air, AGFFileReader.Examples_N_BK7, AGFFileReader.Air, AGFFileReader.Air, AGFFileReader.Air, 0.05, false)
     obj = HologramSurface(rect, int)
     sys = CSGOpticalSystem(
         LensAssembly(obj),
@@ -186,46 +186,16 @@ function draw_HOEcollimate(filename::Union{Nothing,AbstractString}=nothing)
             interface=opaqueinterface()))
 
     raygenerator = OpticSim.Emitters.Sources.Source(
-        transform=Transform(rotmatd(180, 0, 0), Vec3(0.0, 0.0, 10.0)),
+        transform=Transform(rotmatd(180, 0, 0), OpticSim.Geometry.Vec3(0.0, 0.0, 10.0)),
         spectrum=Spectrum.DeltaFunction(0.55),
         origins=Origins.Point(),
         directions=Directions.RectGrid(π / 4, π / 4, 8, 8))
 
-    Vis.drawtracerays(sys; raygenerator, trackallrays=true, rayfilter=nothing, test=true)
-    Vis.save(filename)
-    return nothing
-end
+    fig = MeshFigure()
+    draw!(fig, sys)
+    drawtracerays!(fig, sys; raygenerator, trackallrays=true, rayfilter=nothing, test=true)
 
-function draw_multiHOE(filename::Union{Nothing,AbstractString}=nothing)
-    rect = Rectangle(5.0, 5.0, SVector(0.0, 0.0, 1.0), SVector(0.0, 0.0, 0.0))
-    int1 = HologramInterface(
-        SVector(-5.0, 0.0, -20.0), ConvergingBeam,
-        SVector(0.0, -1.0, -1.0), CollimatedBeam,
-        0.55, 100.0, AGFFileReader.Air, Examples_N_BK7, AGFFileReader.Air, AGFFileReader.Air, AGFFileReader.Air, 0.05, false)
-    int2 = HologramInterface(
-        SVector(5.0, 0.0, -20.0), ConvergingBeam,
-        SVector(0.0, 1.0, -1.0), CollimatedBeam,
-        0.55, 100.0, AGFFileReader.Air, Examples_N_BK7, AGFFileReader.Air, AGFFileReader.Air, AGFFileReader.Air, 0.05, false)
-    mint = MultiHologramInterface(int1, int2)
-    obj = MultiHologramSurface(rect, mint)
-    sys = CSGOpticalSystem(
-        LensAssembly(obj),
-        Rectangle(10.0, 10.0, SVector(0.0, 0.0, 1.0), SVector(0.0, 0.0, -20.0), interface=opaqueinterface()))
-
-    spectrum = Spectrum.DeltaFunction(0.55)
-    origins = Origins.RectUniform(3.0, 3.0, 500)
-    directions = Directions.Constant(0.0, 0.0, -1.0)
-    s1 = OpticSim.Emitters.Sources.Source(; spectrum, origins, directions, sourcenum=1,
-        transform=Transform(rotmatd(-45, 0, 0), Vec3(0.0, 3.0, 3.0)))
-    s2 = OpticSim.Emitters.Sources.Source(; spectrum, origins, directions, sourcenum=2,
-        transform=Transform(rotmatd(45, 0, 0), Vec3(0.0, -3.0, 3.0)))
-    s3 = OpticSim.Emitters.Sources.Source(; spectrum, origins, directions, sourcenum=3,
-        transform=translation(0.0, 0.0, 3.0))
-    raygenerator = OpticSim.Emitters.Sources.CompositeSource(Transform(), [s1, s2, s3])
-
-    Vis.drawtracerays(sys; raygenerator, trackallrays=true, colorbysourcenum=true, rayfilter=nothing, drawgen=true)
-    Vis.save(filename)
-    return nothing
+    return figure(fig)
 end
 
 function draw_stackedbeamsplitters()
