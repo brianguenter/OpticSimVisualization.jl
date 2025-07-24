@@ -9,12 +9,12 @@ draw_cooketriplet()
 ```
 
 # Reference
-<!-- ```@autodocs
+```@autodocs
 Modules = [OpticSimVisualization]
-Private = true
-``` -->
+Private = false
 ```
+<!-- ```
 @docs
 
-```
+``` -->
 
