@@ -7,7 +7,7 @@ using LinearAlgebra
 using Distributions
 using StaticArrays
 
-import Makie
+import GLMakie
 
 using .Emitters
 using .Emitters.Spectrum
@@ -24,47 +24,46 @@ const MARKER_SIZE = 1
 #-------------------------------------
 # draw debug information - local axes and positions
 #-------------------------------------
-function maybe_draw_debug_info(ax::Makie.AbstractAxis, o::Origins.AbstractOriginDistribution; transform::Geometry.Transform=Transform(), debug::Bool=false, kwargs...) where {T<:Real}
-
+function maybe_draw_debug_info(fig::MeshFigure, o::Origins.AbstractOriginDistribution; transform::Geometry.Transform=Transform(), debug::Bool=false, kwargs...)
+    ax = axis(fig)
     dir = forward(transform)
-    uv = SVector{3}(right(transform))
-    vv = SVector{3}(up(transform))
-    pos = origin(transform)
+    uv = SVector{3}(OpticSim.Geometry.right(transform))
+    vv = SVector{3}(OpticSim.Geometry.up(transform))
+    pos = OpticSim.Geometry.origin(transform)
 
     if (debug)
         # draw the origin and normal of the surface
-        Makie.scatter!(ax, pos, color=:blue, markersize=MARKER_SIZE * visual_size(o))
+        Makie.scatter!(ax, pos, color=:blue, markersize=MARKER_SIZE * OpticSim.Emitters.visual_size(o))
 
         # normal
-        arrow_size = ARRROW_SIZE * visual_size(o)
+        arrow_size = ARRROW_SIZE * OpticSim.Emitters.visual_size(o)
         arrow_start = pos
-        arrow_end = dir * ARRROW_LENGTH * visual_size(o)
+        arrow_end = dir * ARRROW_LENGTH * OpticSim.Emitters.visual_size(o)
         Makie.arrows!(ax, [Makie.Point3f(arrow_start)], [Makie.Point3f(arrow_end)], arrowsize=arrow_size, linewidth=arrow_size * 0.5, linecolor=:blue, arrowcolor=:blue)
-        arrow_end = uv * 0.5 * ARRROW_LENGTH * visual_size(o)
+        arrow_end = uv * 0.5 * ARRROW_LENGTH * OpticSim.Emitters.visual_size(o)
         Makie.arrows!(ax, [Makie.Point3f(arrow_start)], [Makie.Point3f(arrow_end)], arrowsize=0.5 * arrow_size, linewidth=arrow_size * 0.5, linecolor=:red, arrowcolor=:red)
-        arrow_end = vv * 0.5 * ARRROW_LENGTH * visual_size(o)
+        arrow_end = vv * 0.5 * ARRROW_LENGTH * OpticSim.Emitters.visual_size(o)
         Makie.arrows!(ax, [Makie.Point3f(arrow_start)], [Makie.Point3f(arrow_end)], arrowsize=0.5 * arrow_size, linewidth=arrow_size * 0.5, linecolor=:green, arrowcolor=:green)
 
         # draw all the samples origins
         positions = map(x -> transform * x, collect(o))
         positions = collect(Makie.Point3f, positions)
-        Makie.scatter!(ax, positions, color=:green, markersize=MARKER_SIZE * visual_size(o))
+        Makie.scatter!(ax, positions, color=:green, markersize=MARKER_SIZE * OpticSim.Emitters.visual_size(o))
     end
-
+    return figure(fig)
 end
-
 
 #-------------------------------------
 # draw point origin
 #-------------------------------------
-function OpticSimVisualization.draw!(ax::Makie.AbstractAxis, o::Origins.Point; transform::Geometry.Transform=Transform(), kwargs...) where {T<:Real}
-    maybe_draw_debug_info(ax, o; transform=transform, kwargs...)
+function OpticSimVisualization.draw!(fig::MeshFigure, o::Origins.Point; transform::Geometry.Transform=Transform(), kwargs...)
+    maybe_draw_debug_info(fig, o; transform=transform, kwargs...)
 end
 
 #-------------------------------------
 # draw RectGrid and RectUniform origins
 #-------------------------------------
-function OpticSimVisualization.draw!(ax::Makie.AbstractAxis, o::Union{Origins.RectGrid,Origins.RectUniform}; transform::Geometry.Transform=Transform(), kwargs...) where {T<:Real}
+function OpticSimVisualization.draw!(fig::MeshFigure, o::Union{Origins.RectGrid,Origins.RectUniform}; transform::Geometry.Transform=Transform(), kwargs...)
     dir = forward(transform)
     uv = SVector{3}(right(transform))
     vv = SVector{3}(up(transform))
@@ -75,16 +74,15 @@ function OpticSimVisualization.draw!(ax::Makie.AbstractAxis, o::Union{Origins.Re
     plane = OpticSim.Plane(dir, pos)
     rect = OpticSim.Rectangle(plane, o.width / 2, o.height / 2, uv, vv)
 
-    OpticSimVisualization.draw!(ax, rect; kwargs...)
+    OpticSimVisualization.draw!(fig, rect; kwargs...)
 
-    maybe_draw_debug_info(ax, o; transform=transform, kwargs...)
+    maybe_draw_debug_info(fig, o; transform=transform, kwargs...)
 end
-
 
 #-------------------------------------
 # draw hexapolar origin
 #-------------------------------------
-function OpticSimVisualization.draw!(ax::Makie.AbstractAxis, o::Origins.Hexapolar; transform::Geometry.Transform=Transform(), kwargs...) where {T<:Real}
+function OpticSimVisualization.draw!(fig::MeshFigure, o::Origins.Hexapolar; transform::Geometry.Transform=Transform(), kwargs...)
     dir = forward(transform)
     uv = SVector{3}(right(transform))
     vv = SVector{3}(up(transform))
@@ -93,17 +91,17 @@ function OpticSimVisualization.draw!(ax::Makie.AbstractAxis, o::Origins.Hexapola
     plane = OpticSim.Plane(dir, pos)
     ellipse = OpticSim.Ellipse(plane, o.halfsizeu, o.halfsizev, uv, vv)
 
-    OpticSimVisualization.draw!(ax, ellipse; kwargs...)
+    OpticSimVisualization.draw!(fig, ellipse; kwargs...)
 
-    maybe_draw_debug_info(ax, o; transform=transform, kwargs...)
+    maybe_draw_debug_info(fig, o; transform=transform, kwargs...)
 end
 
 #-------------------------------------
 # draw source
 #-------------------------------------
-function OpticSimVisualization.draw!(ax::Makie.AbstractAxis, s::S; parent_transform::Geometry.Transform=Transform(), debug::Bool=false, kwargs...) where {T<:Real,S<:Sources.AbstractSource{T}}
-
-    OpticSimVisualization.draw!(ax, Emitters.Sources.origins(s); transform=parent_transform * Emitters.Sources.transform(s), debug=debug, kwargs...)
+function OpticSimVisualization.draw!(fig::MeshFigure, s::S; parent_transform::Geometry.Transform=Transform(), debug::Bool=false, kwargs...) where {T<:Real,S<:Sources.AbstractSource{T}}
+    ax = axis(fig)
+    OpticSimVisualization.draw!(fig, Emitters.Sources.origins(s); transform=parent_transform * Emitters.Sources.transform(s), debug=debug, kwargs...)
 
     if (debug)
         m = zeros(T, length(s), 7)
@@ -113,21 +111,23 @@ function OpticSimVisualization.draw!(ax::Makie.AbstractAxis, s::S; parent_transf
             m[index, 1:7] = [ray.origin... ray.direction... OpticSim.power(optical_ray)]
         end
 
-        m[:, 4:6] .*= m[:, 7] * ARRROW_LENGTH * visual_size(Emitters.Sources.origins(s))
+        m[:, 4:6] .*= m[:, 7] * ARRROW_LENGTH * OpticSim.Emitters.visual_size(Emitters.Sources.origins(s))
 
         color = :yellow
-        arrow_size = ARRROW_SIZE * visual_size(Emitters.Sources.origins(s))
+        arrow_size = ARRROW_SIZE * OpticSim.Emitters.visual_size(Emitters.Sources.origins(s))
         Makie.arrows!(ax, m[:, 1], m[:, 2], m[:, 3], m[:, 4], m[:, 5], m[:, 6]; kwargs..., arrowcolor=color, linecolor=color, arrowsize=arrow_size, linewidth=arrow_size * 0.5)
     end
+    return figure(fig)
 end
 
 #-------------------------------------
 # draw optical rays
 #-------------------------------------
-function OpticSimVisualization.draw!(ax::Makie.AbstractAxis, rays::AbstractVector{OpticSim.OpticalRay{T,3}};
+function OpticSimVisualization.draw!(fig::MeshFigure, rays::AbstractVector{OpticSim.OpticalRay{T,3}};
     debug::Bool=false,  # make sure debug does not end up in kwargs (Makie would error)
     kwargs...
 ) where {T<:Real}
+    ax = axis(fig)
     m = zeros(T, length(rays) * 2, 3)
     for (index, optical_ray) in enumerate(rays)
         ray = OpticSim.ray(optical_ray)
@@ -137,13 +137,18 @@ function OpticSimVisualization.draw!(ax::Makie.AbstractAxis, rays::AbstractVecto
 
     color = :green
     Makie.linesegments!(ax, m[:, 1], m[:, 2], m[:, 3]; kwargs..., color=color, linewidth=2,)
+    return figure(fig)
 end
 
 #-------------------------------------
 # draw composite source
 #-------------------------------------
-function OpticSimVisualization.draw!(ax::Makie.AbstractAxis, s::Sources.CompositeSource{T}; parent_transform::Geometry.Transform=Transform(), kwargs...) where {T<:Real}
+function OpticSimVisualization.draw!(fig::MeshFigure, s::Sources.CompositeSource{T}; parent_transform::Geometry.Transform=Transform(), kwargs...) where {T<:Real}
     for source in s.sources
-        OpticSimVisualization.draw!(ax, source; parent_transform=parent_transform * Emitters.Sources.transform(s), kwargs...)
+        OpticSimVisualization.draw!(fig, source; parent_transform=parent_transform * Emitters.Sources.transform(s), kwargs...)
     end
+    return figure(fig)
 end
+
+
+
